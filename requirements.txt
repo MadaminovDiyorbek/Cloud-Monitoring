@@ -2,3 +2,4 @@ streamlit
 pandas
 postgrest
 httpx
+psutil

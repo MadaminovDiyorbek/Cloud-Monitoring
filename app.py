@@ -1,12 +1,6 @@
 import streamlit as st
-import psutil
-import time
 import pandas as pd
-import sqlite3
-import os
-from datetime import datetime
-from scapy.all import ARP, Ether, srp
-from mac_vendor_lookup import MacLookup
+from postgrest import SyncPostgrestClient
 
 SUPABASE_URL = "https://wffcuseusugwafljvavv.supabase.co/rest/v1"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZmN1c2V1c3Vnd2FmbGp2YXZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzI3MzMsImV4cCI6MjA5MDM0ODczM30.LhC9OE3lRBROjabQsOAQVbt4L691Bwnt13MW8UZ2-qY"

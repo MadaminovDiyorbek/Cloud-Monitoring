@@ -1,95 +1,103 @@
 import streamlit as st
 import pandas as pd
 import os
-import time
-from datetime import datetime
 from postgrest import SyncPostgrestClient
 from streamlit_autorefresh import st_autorefresh
 
-# --- VERCEL UCHUN MUHIM (Buni qo'shing) ---
-def handler(event, context):
-    return {
-        'statusCode': 200,
-        'body': 'Streamlit is running!'
-    }
-# --- 1. SUPABASE SOZLAMALARI ---
-SUPABASE_URL = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY")
+# --- 1. SOZLAMALAR ---
+# Streamlit Secrets orqali Supabase kalitlarini olish
+SUPABASE_URL = st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    st.error("Xato: Supabase kalitlari topilmadi!")
+    st.error("Xato: Supabase kalitlari topilmadi! Streamlit Cloud 'Secrets' bo'limini tekshiring.")
     st.stop()
 
+# Supabase Klientini yaratish
 headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
 client = SyncPostgrestClient(SUPABASE_URL, headers=headers)
-# --- 2. SAHIFA DIZAYNI ---
-st.set_page_config(page_title="OmniCloud Monitoring", layout="wide", page_icon="🌐")
 
-# Avtomatik yangilanish (Har 10 soniyada)
+# Sahifa sozlamalari
+st.set_page_config(page_title="OmniCloud Pro Monitoring", layout="wide", page_icon="📊")
+
+# Avtomatik yangilanish: Har 10 soniyada sahifani yangilaydi
 st_autorefresh(interval=10000, key="datarefresh")
 
-st.markdown("""
-    <style>
-    .stMetric {
-        background-color: #1E1E1E;
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #333;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# --- 2. YORDAMCHI FUNKSIYALAR ---
+def get_status_emoji(val):
+    """Qiymatga qarab rangli emoji qaytaradi"""
+    if val < 50: return "🟢"
+    if val < 85: return "🟡"
+    return "🔴"
 
-# --- 3. MA'LUMOTLARNI SUPABASE'DAN OLISH ---
 def get_data_from_supabase():
+    """Bazadan oxirgi 30 ta yozuvni olib keladi"""
     try:
-        response = client.table("monitor_logs").select("*").order("created_at", desc=True).limit(20).execute()
+        response = client.table("monitor_logs").select("*").order("created_at", desc=True).limit(30).execute()
         return pd.DataFrame(response.data)
     except Exception as e:
-        st.error(f"Baza bilan aloqa yo'q: {e}")
+        st.error(f"Baza bilan aloqa yuzaga kelmadi: {e}")
         return pd.DataFrame()
 
-# --- 4. INTERFEYS ---
-st.title("🌐 OmniCloud: Cloud Monitoring System")
+# --- 3. ASOSIY INTERFEYS ---
+st.title("🌐 OmniCloud: Advanced Cloud Monitoring")
 
 df = get_data_from_supabase()
 
 if not df.empty:
-    # Oxirgi holatni olish
+    # Eng oxirgi kelgan ma'lumot
     latest = df.iloc[0]
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("CPU", f"{latest['cpu_percent']}%")
-    col2.metric("RAM", f"{latest['ram_percent']}%")
-    col3.metric("Disk", f"{latest['disk_percent']}%")
+    # Yuqori Metrikalar Paneli (5 ta ustun)
+    m1, m2, m3, m4, m5 = st.columns(5)
+    
+    with m1:
+        st.metric(f"{get_status_emoji(latest['cpu_percent'])} CPU", f"{latest['cpu_percent']}%")
+    with m2:
+        st.metric(f"{get_status_emoji(latest['ram_percent'])} RAM", f"{latest['ram_percent']}%")
+    with m3:
+        st.metric("💽 Disk", f"{latest['disk_percent']}%")
+    with m4:
+        # get('ustun_nomi', 0) - agar ustun bo'sh bo'lsa xato bermaydi
+        st.metric("⬇️ Download", f"{latest.get('net_down', 0)} MB/s")
+    with m5:
+        st.metric("⬆️ Upload", f"{latest.get('net_up', 0)} MB/s")
 
     st.markdown("---")
     
-    c1, c2 = st.columns([2, 1])
+    # Grafiklarni joylashtirish (Chap va O'ng ustun)
+    col_left, col_right = st.columns([2, 1])
     
-    with c1:
-        st.subheader("📈 Tizim grafigi (Oxirgi 20 ta holat)")
-        # Grafik uchun vaqtni formatlash
-        df['created_at'] = pd.to_datetime(df['created_at']).dt.strftime('%H:%M:%S')
-        st.line_chart(df.set_index('created_at')[['cpu_percent', 'ram_percent']])
+    with col_left:
+        # Vaqtni grafik uchun chiroyli formatlash
+        df['time'] = pd.to_datetime(df['created_at']).dt.strftime('%H:%M:%S')
         
-    with c2:
+        st.subheader("🚀 Tarmoq Tezligi Dinamikasi (MB/s)")
+        # Internet tezligi grafigi (Download va Upload birga)
+        st.area_chart(df.set_index('time')[['net_down', 'net_up']])
+        
+        st.subheader("📊 Tizim Yuklamasi (%)")
+        # CPU va RAM grafigi
+        st.line_chart(df.set_index('time')[['cpu_percent', 'ram_percent']])
+
+    with col_right:
         st.subheader("📋 Oxirgi Loglar")
-        st.dataframe(df[['hostname', 'cpu_percent', 'ram_percent', 'created_at']].head(10))
+        # Loglar jadvali (eng kerakli ustunlar bilan)
+        log_df = df[['time', 'cpu_percent', 'ram_percent', 'net_down']].head(10)
+        st.dataframe(log_df, use_container_width=True)
+        
+        # Kritik ogohlantirishlar paneli
+        st.subheader("⚠️ Holat")
+        if latest['cpu_percent'] > 85:
+            st.error(f"Kritik: Protsessor yuklamasi {latest['cpu_percent']}% !")
+        elif latest['ram_percent'] > 90:
+            st.warning(f"Diqqat: Operativ xotira deyarli to'ldi!")
+        else:
+            st.success("Tizim barqaror ishlamoqda.")
 
 else:
-    st.info("Hozircha ma'lumot yo'q. Agent.py kodi ishlayotganiga ishonch hosil qiling.")
+    st.info("Ma'lumotlar bazadan kutilmoqda... Agent.py ishlayotganiga ishonch hosil qiling.")
 
-# Tarmoq skaneri (Vercel'da cheklangan bo'lishi mumkin)
-with st.expander("📡 Tarmoq skaneri (Lokal uchun)"):
-    st.warning("Eslatma: Ushbu funksiya faqat lokal tarmoqda va admin huquqi bilan ishlaydi.")
-    ip_range = st.text_input("IP diapazon:", "192.168.1.1/24")
-    if st.button("Skanerlash"):
-        st.error("Cloud serverda xavfsizlik tufayli taqiqlangan.")
-
-# Kodingizning ENG OXIRIGA buni qo'shing:
-if __name__ == "__main__":
-    # Bu qism lokalda ishlashi uchun
-    pass
-
-# Vercel qidirayotgan "app" obyekti
-app = handler
+# Footer qismi
+st.markdown("---")
+st.caption(f"Oxirgi yangilanish: {pd.to_datetime('now').strftime('%Y-%m-%d %H:%M:%S')}")

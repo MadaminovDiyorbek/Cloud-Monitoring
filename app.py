@@ -59,9 +59,9 @@ if not df.empty:
         st.metric("💽 Disk", f"{latest['disk_percent']}%")
     with m4:
         # get('ustun_nomi', 0) - agar ustun bo'sh bo'lsa xato bermaydi
-        st.metric("⬇️ Download", f"{latest.get('net_down', 0)} MB/s")
+        m4.metric("⬇️ Download", f"{latest.get('net_down', 0)} Mbps")
     with m5:
-        st.metric("⬆️ Upload", f"{latest.get('net_up', 0)} MB/s")
+        m5.metric("⬆️ Upload", f"{latest.get('net_up', 0)} Mbps")
 
     st.markdown("---")
     
@@ -72,7 +72,7 @@ if not df.empty:
         # Vaqtni grafik uchun chiroyli formatlash
         df['time'] = pd.to_datetime(df['created_at']).dt.strftime('%H:%M:%S')
         
-        st.subheader("🚀 Tarmoq Tezligi Dinamikasi (MB/s)")
+        st.subheader("🚀 Tarmoq Tezligi Dinamikasi (Mbps)")
         # Internet tezligi grafigi (Download va Upload birga)
         st.area_chart(df.set_index('time')[['net_down', 'net_up']])
         

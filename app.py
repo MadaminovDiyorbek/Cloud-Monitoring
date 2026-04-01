@@ -79,3 +79,6 @@ with st.expander("📡 Tarmoq skaneri (Lokal uchun)"):
     ip_range = st.text_input("IP diapazon:", "192.168.1.1/24")
     if st.button("Skanerlash"):
         st.error("Cloud serverda xavfsizlik tufayli taqiqlangan.")
+
+# Vercel xatolik bermasligi uchun (Handler qo'shish)
+app = None

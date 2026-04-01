@@ -6,6 +6,12 @@ from datetime import datetime
 from postgrest import SyncPostgrestClient
 from streamlit_autorefresh import st_autorefresh
 
+# --- VERCEL UCHUN MUHIM (Buni qo'shing) ---
+def handler(event, context):
+    return {
+        'statusCode': 200,
+        'body': 'Streamlit is running!'
+    }
 # --- 1. SUPABASE SOZLAMALARI ---
 SUPABASE_URL = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY")
@@ -80,5 +86,10 @@ with st.expander("📡 Tarmoq skaneri (Lokal uchun)"):
     if st.button("Skanerlash"):
         st.error("Cloud serverda xavfsizlik tufayli taqiqlangan.")
 
-# Vercel xatolik bermasligi uchun (Handler qo'shish)
-app = None
+# Kodingizning ENG OXIRIGA buni qo'shing:
+if __name__ == "__main__":
+    # Bu qism lokalda ishlashi uchun
+    pass
+
+# Vercel qidirayotgan "app" obyekti
+app = handler

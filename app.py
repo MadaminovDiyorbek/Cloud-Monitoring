@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import os
+import pytz
+from datetime import datetime
 from postgrest import SyncPostgrestClient
 from streamlit_autorefresh import st_autorefresh
 
@@ -16,6 +18,9 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 # Supabase Klientini yaratish
 headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
 client = SyncPostgrestClient(SUPABASE_URL, headers=headers)
+
+# Toshkent vaqt zonasi obyekti
+uzb_tz = pytz.timezone('Asia/Tashkent')
 
 # Sahifa sozlamalari
 st.set_page_config(page_title="OmniCloud Pro Monitoring", layout="wide", page_icon="📊")
@@ -34,7 +39,12 @@ def get_data_from_supabase():
     """Bazadan oxirgi 30 ta yozuvni olib keladi"""
     try:
         response = client.table("monitor_logs").select("*").order("created_at", desc=True).limit(30).execute()
-        return pd.DataFrame(response.data)
+        df = pd.DataFrame(response.data)
+        if not df.empty:
+            # UTC vaqtni Toshkent vaqtiga o'girish
+            df['created_at'] = pd.to_datetime(df['created_at']).dt.tz_convert('Asia/Tashkent')
+            df['time'] = df['created_at'].dt.strftime('%H:%M:%S')
+        return df
     except Exception as e:
         st.error(f"Baza bilan aloqa yuzaga kelmadi: {e}")
         return pd.DataFrame()
@@ -100,4 +110,6 @@ else:
 
 # Footer qismi
 st.markdown("---")
-st.caption(f"Oxirgi yangilanish: {pd.to_datetime('now').strftime('%Y-%m-%d %H:%M:%S')}")
+# Sayt yangilangan vaqtini Toshkent soati bilan ko'rsatish
+now_uzb = datetime.now(uzb_tz).strftime('%Y-%m-%d %H:%M:%S')
+st.caption(f"Oxirgi yangilanish (Toshkent vaqti): {now_uzb}")

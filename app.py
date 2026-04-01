@@ -7,12 +7,15 @@ from postgrest import SyncPostgrestClient
 from streamlit_autorefresh import st_autorefresh
 
 # --- 1. SUPABASE SOZLAMALARI ---
-SUPABASE_URL = "https://wffcuseusugwafljvavv.supabase.co/rest/v1"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmZmN1c2V1c3Vnd2FmbGp2YXZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzI3MzMsImV4cCI6MjA5MDM0ODczM30.LhC9OE3lRBROjabQsOAQVbt4L691Bwnt13MW8UZ2-qY"
+SUPABASE_URL = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    st.error("Xato: Supabase kalitlari topilmadi!")
+    st.stop()
 
 headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
 client = SyncPostgrestClient(SUPABASE_URL, headers=headers)
-
 # --- 2. SAHIFA DIZAYNI ---
 st.set_page_config(page_title="OmniCloud Monitoring", layout="wide", page_icon="🌐")
 
